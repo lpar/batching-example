@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 var testCases = []struct {
 	Name      string
@@ -119,6 +122,25 @@ func TestBatch(t *testing.T) {
 			}
 			checkResults(t, got, tc.Output)
 		})
+
+		// Test slices.Chunk
+		t.Run("slices.Chunk "+tc.Name, func(t *testing.T) {
+			if tc.BatchSize <= 0 {
+				t.Skip("slices.Chunk does not support batch size 0 or negative")
+			}
+			got := [][]int{}
+			calls := 0
+			f := func(batch []int) bool {
+				got = append(got, batch)
+				calls++
+				return true
+			}
+			slices.Chunk(tc.Input, tc.BatchSize)(f)
+			if calls != tc.Calls {
+				t.Fatalf("called %d times, expected %d", calls, tc.Calls)
+			}
+			checkResults(t, got, tc.Output)
+		})
 	}
 }
 
@@ -160,6 +182,14 @@ func BenchmarkBatcher(b *testing.B) {
 func BenchmarkBatchSeq(b *testing.B) {
 	for b.Loop() {
 		BatchSeq(testCases[0].Input, testCases[0].BatchSize)(func(batch []int) bool {
+			return true
+		})
+	}
+}
+
+func BenchmarkChunk(b *testing.B) {
+	for b.Loop() {
+		slices.Chunk(testCases[0].Input, testCases[0].BatchSize)(func(batch []int) bool {
 			return true
 		})
 	}
